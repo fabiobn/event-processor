@@ -16,3 +16,5 @@ services:
       - "/var/run/docker.sock:/var/run/docker.sock"
       - "./localstack_setup/init-aws.sh:/etc/localstack/init/ready.d/init-aws.sh"
       - "../lambda_function.py:/var/lambda/event_processor.py"
+      - "../processor_delivery.py:/var/lambda/processor_delivery.py"
+      - "../package:/var/lambda/package"

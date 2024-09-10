@@ -8,6 +8,7 @@ EVENT_PROCESSOR_LAMBDA_ROLE=event-processor-lambda-role
 EVENT_PROCESSOR_LAMBDA_ROLE_POLICY=send-message-topic-policy
 EVENT_PROCESSOR_QUEUE="event-processor.fifo"
 EVENT_PROCESSOR_QUEUE_DLQ="event-processor-dlq"
+EVENT_PROCESSOR_CLIENT_QUEUE="event-processor-client.fifo"
 TOPIC_NAME_CLIENT1="event-processor-client1.fifo"
 TOPIC_NAME_CLIENT2="event-processor-client2.fifo"
 TOPIC_NAME_CLIENT3="event-processor-client3.fifo"
@@ -30,6 +31,7 @@ awslocal iam attach-role-policy \
 echo "===================sqs create-queue==================="
 awslocal sqs create-queue --queue-name ${EVENT_PROCESSOR_QUEUE} --region ${AWS_REGION} --attributes '{"FifoQueue": "true", "FifoThroughputLimit": "perMessageGroupId", "ContentBasedDeduplication": "true", "DeduplicationScope": "messageGroup"}'
 awslocal sqs create-queue --queue-name ${EVENT_PROCESSOR_QUEUE_DLQ} --region ${AWS_REGION}
+awslocal sqs create-queue --queue-name ${EVENT_PROCESSOR_CLIENT_QUEUE} --region ${AWS_REGION} --attributes '{"FifoQueue": "true", "FifoThroughputLimit": "perMessageGroupId", "ContentBasedDeduplication": "true", "DeduplicationScope": "messageGroup"}'
 
 echo "===================sns create-topic==================="
 awslocal sns create-topic --name ${TOPIC_NAME_CLIENT1} --region ${AWS_REGION} --attributes '{"FifoTopic": "true", "ContentBasedDeduplication": "true"}'
@@ -37,7 +39,10 @@ awslocal sns create-topic --name ${TOPIC_NAME_CLIENT2} --region ${AWS_REGION} --
 awslocal sns create-topic --name ${TOPIC_NAME_CLIENT3} --region ${AWS_REGION} --attributes '{"FifoTopic": "true", "ContentBasedDeduplication": "true"}'
 
 echo "===================lambda create-function==================="
-cd /var/lambda/
+cd /var/lambda/package
+zip -r ../function.zip .
+cd ..
+zip function.zip processor_delivery.py
 zip function.zip event_processor.py
 awslocal lambda create-function \
     --function-name ${EVENT_PROCESSOR_LAMBDA} \
@@ -45,7 +50,8 @@ awslocal lambda create-function \
     --zip-file fileb://function.zip \
     --handler event_processor.handler \
     --dead-letter-config '{"TargetArn": "arn:aws:sqs:$AWS_REGION:000000000000:$EVENT_PROCESSOR_QUEUE_DLQ"}' \
-    --role arn:aws:iam::000000000000:role/${EVENT_PROCESSOR_LAMBDA_ROLE}
+    --role arn:aws:iam::000000000000:role/${EVENT_PROCESSOR_LAMBDA_ROLE} \
+    --region ${AWS_REGION}
 
 echo "===================lambda create-event-source-mapping==================="
 awslocal lambda create-event-source-mapping \
@@ -59,3 +65,9 @@ awslocal lambda add-permission \
   --statement-id sqs \
   --principal sqs.amazonaws.com \
   --source-arn arn:aws:sqs:${AWS_REGION}:000000000000:${EVENT_PROCESSOR_QUEUE}
+
+echo "===================sns client subscribe==================="
+awslocal sns subscribe \
+  --topic-arn arn:aws:sns:us-east-1:000000000000:${TOPIC_NAME_CLIENT1} \
+  --protocol sqs \
+  --notification-endpoint arn:aws:sqs:${AWS_REGION}:000000000000:${EVENT_PROCESSOR_CLIENT_QUEUE}
