@@ -39,11 +39,14 @@ awslocal sns create-topic --name ${TOPIC_NAME_CLIENT2} --region ${AWS_REGION} --
 awslocal sns create-topic --name ${TOPIC_NAME_CLIENT3} --region ${AWS_REGION} --attributes '{"FifoTopic": "true", "ContentBasedDeduplication": "true"}'
 
 echo "===================lambda create-function==================="
+cd /var/lambda
+pip install --target ./package -r requirements.txt
 cd /var/lambda/package
 zip -r ../function.zip .
 cd ..
-zip function.zip processor_delivery.py
 zip function.zip event_processor.py
+zip -r function.zip service
+zip -r function.zip usecase
 awslocal lambda create-function \
     --function-name ${EVENT_PROCESSOR_LAMBDA} \
     --runtime python3.12 \
