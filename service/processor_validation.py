@@ -12,10 +12,11 @@ class ValidatorService:
             # Parse the schema
             resultado = SchemaMessage().load(message)
 
-            print("depois validaçao")
+            print("depois validacao")
             # Print the validation result
             print(resultado)  # Whether it adheres to the schema
         except ValidationError as error:
+            print("Erro de validacao")
             print(error.messages)
             print(error.valid_data)
             raise error
