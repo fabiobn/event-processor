@@ -41,7 +41,7 @@ class SNSDeliveryService:
             # Define tópico, group id e id deduplicação para envio da mensagem
             topic_to_send = self.__define_destination_topic(message['destino'])
             message_group_id = self.__define_group_id(message['destino'])
-            message_id = self.__define_group_id(message['id'])
+            message_id = message['id']
             print(f"Topico definido: {topic_to_send}")
             print(f"Group id definido: {message_group_id}")
             print(f"Id da mensagem: {message_id}")
