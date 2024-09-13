@@ -1,52 +1,69 @@
+"""
+Event Processor Delivery module: Serviço de entrega de mensagem para tópico de cliente correspondente.
+"""
+
 import json
 import os
 
+# Definição de variáveis com base nas informações de environments
 AWS_REGION = os.environ['AWS_REGION']
+
+# Nome do tópico referente a cada cliente
 TOPIC_NAME_CLIENT1=os.environ['TOPIC_NAME_CLIENT1']
 TOPIC_NAME_CLIENT2=os.environ['TOPIC_NAME_CLIENT2']
 TOPIC_NAME_CLIENT3=os.environ['TOPIC_NAME_CLIENT3']
-EVENT_PROCESSOR_QUEUE_DLQ=os.environ['EVENT_PROCESSOR_QUEUE_DLQ']
 
+# ARN do tópico referente a cada cliente
 TOPIC_ARN1=f'arn:aws:sns:{AWS_REGION}:000000000000:{TOPIC_NAME_CLIENT1}'
 TOPIC_ARN2=f'arn:aws:sns:{AWS_REGION}:000000000000:{TOPIC_NAME_CLIENT2}'
 TOPIC_ARN3=f'arn:aws:sns:{AWS_REGION}:000000000000:{TOPIC_NAME_CLIENT3}'
 
-SQS_QUEUE_DLQ_URL=f'http://sqs.{AWS_REGION}.localhost.localstack.cloud:4566/000000000000/{EVENT_PROCESSOR_QUEUE_DLQ}'
-
 class SNSDeliveryService:
+    """Classe de serviço para envio de mensagem em tópico destino"""
 
     def __init__(self, sns_client):
+        """
+        Inicializa classe de serviço para publicação em tópico SNS
+        Parameters:
+        sns_client (BaseClient): SNS Client para publicação em tópico
+        """
         self.sns_client = sns_client
 
     def publish_message(self, message):
+        """
+        Publica mensagem em tópico SNS
+        Parameters:
+        message (object): mensagem recebida
+        """
         try:
-            print("Sending message to SNS 123")
-            print(f"Message to send to SNS 123: {json.dumps(message, indent=2)}")
+            print("Publicando mensagem no SNS")
 
+            # Define tópico, group id e id deduplicação para envio da mensagem
             topic_to_send = self.__define_destination_topic(message['destino'])
             message_group_id = self.__define_group_id(message['destino'])
+            message_id = self.__define_group_id(message['id'])
+            print(f"Topico definido: {topic_to_send}")
+            print(f"Group id definido: {message_group_id}")
+            print(f"Id da mensagem: {message_id}")
 
-            print(f"Topic: {topic_to_send}")
-            print(f"Topic: {message['destino']}")
-            print(f"Topic: {message['id']}")
-            # publish message to sns
-            snsResponse = self.sns_client.publish(
+            self.sns_client.publish(
                 TargetArn=topic_to_send,
                 Message=json.dumps(message, indent=2),
                 Subject='PROCESSAMENTO DE INFORMACAO',
                 MessageGroupId=str(message_group_id),
-                MessageDeduplicationId=str(message['id'])
+                MessageDeduplicationId=str(message_id)
             )
-            print(f"Message sent to SNS: {json.dumps(message, indent=2)}")
+            print(f"Mensagem enviada para SNS com sucesso: {json.dumps(message, indent=2)}")
         except Exception as error:
-            print("An exception occurred:", error)
+            print("Falha no envio da mensagem para SNS: ", error)
             raise error
 
     def __define_destination_topic(self, cliente_destino) -> str:
-        print(f'__define_destination_topic {cliente_destino}')
-        print(f'__define_destination_topic {TOPIC_ARN1}')
-        print(f'__define_destination_topic {TOPIC_ARN2}')
-        print(f'__define_destination_topic {TOPIC_ARN3}')
+        """
+        Define tópico de destino, a partir da informação destino da mensagem recebida
+        Parameters:
+        cliente_destino (str): informação de destino da mensagem recebida
+        """
         if cliente_destino == "loja A":
            return TOPIC_ARN1
         elif cliente_destino == "loja B":
@@ -55,30 +72,14 @@ class SNSDeliveryService:
             return TOPIC_ARN3
 
     def __define_group_id(self, cliente_destino) -> str:
+        """
+        Define group id da mensagem a ser enviada para o tópico, a partir da informação destino da mensagem recebida
+        Parameters:
+        cliente_destino (str): informação de destino da mensagem recebida
+        """
         if cliente_destino == "loja A":
            return "A"
         elif cliente_destino == "loja B":
             return "B"
         else:
             return "C"
-
-class SQSDeliveryService:
-
-    def __init__(self, sqs_client):
-        self.sqs_client = sqs_client
-
-    def send_message(self, message):
-        try:
-            print(f"Sending message to SQS")
-            print(f"Message to send to SQS: {json.dumps(message, indent=2)}")
-            print(f"SQS: {SQS_QUEUE_DLQ_URL}")
-
-            # publish message to sns
-            sqsResponse = self.sqs_client.send_message(
-                QueueUrl=SQS_QUEUE_DLQ_URL,
-                MessageBody=json.dumps(message, indent=2)
-            )
-            print(f"Message sent to SQS: {json.dumps(message, indent=2)}")
-        except Exception as error:
-            print("An exception occurred:", error)
-            raise error

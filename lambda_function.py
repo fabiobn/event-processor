@@ -1,25 +1,32 @@
 import json
-
 import boto3
 from marshmallow import ValidationError
 
-from service.processor_delivery import SNSDeliveryService, SQSDeliveryService
+from service.processor_delivery import SNSDeliveryService
 from service.processor_validation import ValidatorService
 from usecase.processor_use_case import EventProcessorUseCase
 
+# Intancia cliente de SNS
 sns = boto3.client('sns', region_name='us-east-1')
-sqs = boto3.client('sqs', region_name='us-east-1')
 
 def handler(event, context):
-    print("HELLO")
-    print(f"event=${event['Records'][0]['body']}")
+    """
+    Handler do Lambda para recepcionar a mensagem da fila
+    Parameters:
+    event (object): evento contendo informação da mensagem a ser processada
+    context (object): contexto de processameto da lambda
+    """
+
+    print("Recebendo mensagem do produtor via fila SQS")
+    print(f"Mensagem recebida {event['Records'][0]['body']}")
     body = json.loads(event['Records'][0]['body'])
 
     try:
-        print("HELLO")
+        # Instancia serviços de validação e entrega de mensagem em tópico
         validator_service = ValidatorService()
         delivery_service = SNSDeliveryService(sns)
 
+        # Instancia e execuda use case para processamento da mensagem vinda do evento
         use_case = EventProcessorUseCase(validator_service, delivery_service)
         use_case.execute(body)
         return {
@@ -27,10 +34,8 @@ def handler(event, context):
             'body': 'Function executed successfully!'
         }
     except ValidationError as validationError:
-        print("An validation exception occurred:", validationError)
-        #sqs_delivery_service = SQSDeliveryService(sqs)
-        #sqs_delivery_service.send_message(body)
+        print(f"Erro de validacao: {validationError}")
         raise validationError
     except Exception as error:
-        print("An exception occurred:", error)
+        print(f"Erro interno: {error}")
         raise error
