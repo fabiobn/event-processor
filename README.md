@@ -32,10 +32,14 @@ manter a ordem de envio na recepção em cada um deles.
 - Para o processamento reativo das mensagens que chegam na fila FIFO SQS, foi definida uma Lambda Function associada a ela.
 A partir desta ligação, do tipo FIFO da fila e do envio do message group id, é possível ter uma instância da function
 tratando de um tipo de mensagem.
+- O serviço SNS também atuará como persistência das mensagens tratadas pelo processador de eventos. A partir dele,
+um Sender pode ser criado, fazer subscrição no tópico e realizar o devido processamento relacionado a um cliente. Esta
+parte não faz parte do escopo do case.
 - A criação dos serviços no Localstack é feita através de um script, o qual foi mapeado via volume no arquivo docker
 compose para diretório próprio utilizado na imagem Localstack na inicialização do container.
 - Existem alguns scripts para simular o envio de mensagens válidas e inválidas pelos produtores, recepção das mensagens 
-válidas pelos clientes, recepção de um possível tratamento de mensagens inválidas na fila DLQ.
+válidas pelos clientes, recepção de um possível tratamento de mensagens inválidas na fila DLQ e o envio de mensagens
+duplicadas por um produtor.
 
 ## Como executar o case
 
